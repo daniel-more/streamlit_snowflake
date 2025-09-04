@@ -45,59 +45,44 @@ def run_query(query):
 sales_df = run_query(
     """
     SELECT 
-        ORDER_DATE::date as ORDER_DATE,
-        REGION,
-        PRODUCT,
-        SALES_AMOUNT
-    FROM ORDERS
-    WHERE ORDER_DATE >= DATEADD('month', -6, current_date) -- last 6 months
+        ORDER_TS::date as ORDER_DATE,
+        TRUCK_ID,
+        ORDER_TOTAL
+    FROM TASTY_BYTES.RAW_POS.ORDER_HEADER
+    WHERE ORDER_TS >= DATEADD('month', -36, current_date) -- last 6 months
+      AND ORDER_TOTAL IS NOT NULL
 """
 )
 
 # -----------------
 # Sidebar Filters
 # -----------------
-regions = st.sidebar.multiselect(
-    "Select Regions:",
-    options=sales_df["REGION"].unique(),
-    default=sales_df["REGION"].unique(),
+trucks = st.sidebar.multiselect(
+    "Select Truck IDs:",
+    options=sales_df["TRUCK_ID"].unique(),
+    default=sales_df["TRUCK_ID"].unique(),
 )
 
-products = st.sidebar.multiselect(
-    "Select Products:",
-    options=sales_df["PRODUCT"].unique(),
-    default=sales_df["PRODUCT"].unique(),
-)
-
-filtered_df = sales_df[
-    (sales_df["REGION"].isin(regions)) & (sales_df["PRODUCT"].isin(products))
-]
+filtered_df = sales_df[sales_df["TRUCK_ID"].isin(trucks)]
 
 # -----------------
 # KPI Cards
 # -----------------
-st.title("📊 Sales Dashboard (Snowflake Powered)")
+st.title("🚚 Tasty Bytes Sales Dashboard (by Truck)")
 
 col1, col2, col3 = st.columns(3)
-col1.metric("Total Sales", f"${filtered_df['SALES_AMOUNT'].sum():,.0f}")
-col2.metric("Avg Order", f"${filtered_df['SALES_AMOUNT'].mean():,.0f}")
+col1.metric("Total Sales", f"${filtered_df['ORDER_TOTAL'].sum():,.0f}")
+col2.metric("Avg Order", f"${filtered_df['ORDER_TOTAL'].mean():,.0f}")
 col3.metric("Orders", f"{filtered_df.shape[0]:,}")
 
 # -----------------
 # Charts
 # -----------------
 st.subheader("Sales Over Time")
-st.line_chart(filtered_df.groupby("ORDER_DATE")["SALES_AMOUNT"].sum())
+st.line_chart(filtered_df.groupby("ORDER_DATE")["ORDER_TOTAL"].sum())
 
-st.subheader("Top Products")
-top_products = (
-    filtered_df.groupby("PRODUCT")["SALES_AMOUNT"]
-    .sum()
-    .sort_values(ascending=False)
-    .head(10)
+st.subheader("Top Trucks by Sales")
+truck_sales = (
+    filtered_df.groupby("TRUCK_ID")["ORDER_TOTAL"].sum().sort_values(ascending=False)
 )
-st.bar_chart(top_products)
-
-st.subheader("Sales by Region")
-region_sales = filtered_df.groupby("REGION")["SALES_AMOUNT"].sum()
-st.bar_chart(region_sales)
+st.bar_chart(truck_sales)
