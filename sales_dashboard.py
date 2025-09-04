@@ -69,6 +69,7 @@ filtered_df = sales_df[sales_df["TRUCK_ID"].isin(trucks)]
 # KPI Cards
 # -----------------
 st.title("🚚 Tasty Bytes Sales Dashboard (by Truck)")
+st.write("Dashboard powered by a Snowflake database")
 
 col1, col2, col3 = st.columns(3)
 col1.metric("Total Sales", f"${filtered_df['ORDER_TOTAL'].sum():,.0f}")
